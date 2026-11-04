@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniLink Remote - All-in-One Remote Desktop & Screen Control</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navbar -->
+    <header class="top-nav">
+      <div class="brand">
+        <i class="fa-solid fa-satellite-dish logo-icon"></i>
+        <div class="brand-text">
+          <h1>OmniLink Remote</h1>
+          <span class="badge-pro">All-in-One Engine</span>
+        </div>
+      </div>
+      <div class="connection-status" id="wsStatus">
+        <a href="#apkModal" class="btn-download-apk" id="btnShowApkModal"><i class="fa-brands fa-android"></i> Download APK</a>
+        <span class="status-dot disconnected"></span>
+        <span class="status-label">Disconnected from Server</span>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- 1. Connection Prompt View -->
+      <section class="connect-card" id="connectSection">
+        <div class="card-header">
+          <h2><i class="fa-solid fa-mobile-screen"></i> Connect to Remote Device</h2>
+          <p>Enter the 9-digit Partner ID of the Android phone or computer you want to control</p>
+        </div>
+
+        <form id="connectForm" class="connect-form">
+          <div class="input-group">
+            <label for="partnerId"><i class="fa-solid fa-hashtag"></i> Partner ID</label>
+            <input type="text" id="partnerId" placeholder="e.g. 458 920 114" maxlength="11" required autocomplete="off">
+          </div>
+
+          <div class="auth-tabs">
+            <button type="button" class="tab-btn active" id="tabPinBtn">Security PIN</button>
+            <button type="button" class="tab-btn" id="tabUnattendedBtn">24/7 Master Password</button>
+          </div>
+
+          <div class="input-group" id="pinInputGroup">
+            <label for="partnerPin"><i class="fa-solid fa-key"></i> 4-Digit Temporary PIN</label>
+            <input type="password" id="partnerPin" placeholder="****" maxlength="6" autocomplete="off">
+          </div>
+
+          <div class="input-group hidden" id="unattendedInputGroup">
+            <label for="partnerPassword"><i class="fa-solid fa-lock"></i> Unattended Master Password</label>
+            <input type="password" id="partnerPassword" placeholder="Enter static password">
+          </div>
+
+          <div class="options-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="lowLatencyMode" checked>
+              <span>Ultra Low-Latency Mode (Gaming & Smooth 60 FPS)</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn-connect" id="btnConnect">
+            <i class="fa-solid fa-link"></i> Connect Now
+          </button>
+        </form>
+
+        <div class="all-in-one-features">
+          <div class="feature-badge"><i class="fa-solid fa-gauge-high"></i> 0-Lag WebRTC</div>
+          <div class="feature-badge"><i class="fa-solid fa-hand-pointer"></i> Live Touch / Control</div>
+          <div class="feature-badge"><i class="fa-solid fa-folder-open"></i> Direct P2P File Transfer</div>
+          <div class="feature-badge"><i class="fa-solid fa-shield-halved"></i> E2E Encrypted</div>
+        </div>
+      </section>
+
+      <!-- 2. Active Remote Session View (Hidden until connected) -->
+      <section class="session-view hidden" id="sessionSection">
+        <!-- Floating Remote Control Toolbar -->
+        <div class="session-toolbar">
+          <div class="toolbar-group device-info">
+            <span class="device-name" id="connectedDeviceName">Android Device</span>
+            <span class="fps-counter" id="fpsDisplay">60 FPS</span>
+            <span class="latency-counter" id="latencyDisplay">18 ms</span>
+          </div>
+
+          <!-- Remote Navigation Keys (Accessibility Dispatch) -->
+          <div class="toolbar-group nav-keys">
+            <button class="tool-btn" id="btnRemoteBack" title="Back Button">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button class="tool-btn" id="btnRemoteHome" title="Home Button">
+              <i class="fa-solid fa-circle"></i>
+            </button>
+            <button class="tool-btn" id="btnRemoteRecents" title="Recent Apps">
+              <i class="fa-solid fa-square"></i>
+            </button>
+            <button class="tool-btn" id="btnRemoteNotifications" title="Notification Panel">
+              <i class="fa-solid fa-bell"></i>
+            </button>
+          </div>
+
+          <!-- All-in-One Extra Tools -->
+          <div class="toolbar-group action-tools">
+            <button class="tool-btn" id="btnToggleFileTransfer" title="Open File Transfer">
+              <i class="fa-solid fa-file-arrow-up"></i> <span>Files</span>
+            </button>
+            <button class="tool-btn" id="btnToggleChat" title="Live Chat">
+              <i class="fa-solid fa-comments"></i>
+            </button>
+            <button class="tool-btn" id="btnRemoteLock" title="Screen Lock / Power">
+              <i class="fa-solid fa-power-off"></i>
+            </button>
+            <button class="tool-btn danger" id="btnDisconnect" title="End Remote Session">
+              <i class="fa-solid fa-phone-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Video Screen Container -->
+        <div class="screen-canvas-wrapper" id="screenWrapper">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <div class="touch-indicator hidden" id="touchPointer"></div>
+          <div class="screen-placeholder" id="screenPlaceholder">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Receiving screen stream (Establishing P2P WebRTC Connection)...</p>
+          </div>
+        </div>
+
+        <!-- Integrated File Transfer Drawer -->
+        <div class="file-transfer-modal hidden" id="fileTransferModal">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-folder-arrow-up"></i> Direct P2P File Transfer</h3>
+            <button class="close-btn" id="btnCloseFileTransfer"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="modal-body">
+            <div class="file-dropzone" id="fileDropzone">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <p>Drag and drop any file here, or click to browse</p>
+              <input type="file" id="filePicker" multiple style="display:none;">
+              <button class="btn-select-file" onclick="document.getElementById('filePicker').click()">Select Files</button>
+            </div>
+            <div class="file-queue" id="fileQueue">
+              <!-- Upload / Download progress items will appear here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Integrated Chat Drawer -->
+        <div class="chat-drawer hidden" id="chatDrawer">
+          <div class="chat-header">
+            <h3><i class="fa-solid fa-comments"></i> Remote Session Chat</h3>
+            <button class="close-btn" id="btnCloseChat"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-input-bar">
+            <input type="text" id="chatInput" placeholder="Type a message...">
+            <button id="btnSendChat"><i class="fa-solid fa-paper-plane"></i></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- APK Download Modal -->
+      <div class="file-transfer-modal hidden" id="apkDownloadModal" style="max-width: 520px; margin: auto; left: 0; right: 0; top: 80px;">
+        <div class="modal-header">
+          <h3><i class="fa-brands fa-android"></i> OmniLink Remote APK Download & Testing</h3>
+          <button class="close-btn" id="btnCloseApkModal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="font-size: 13px; line-height: 1.6; color: var(--text-main);">
+          <p style="margin-bottom: 12px;"><strong>📱 Two Ways to Test Phone-to-Phone Remote Control:</strong></p>
+          <div style="background: var(--bg-primary); padding: 14px; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--border-color);">
+            <p style="color: var(--accent-green); font-weight: 600; margin-bottom: 4px;">Method 1: Instant Phone-to-Phone Web PWA (No APK Required)</p>
+            <p style="color: var(--text-muted); font-size: 12px;">Open this server URL in Chrome browser on Phone B (e.g. <code>http://[Your-WiFi-IP]:8080</code>). Enter Phone A's 9-digit ID and PIN to start viewing and controlling touch gestures directly on Phone B's touchscreen!</p>
+          </div>
+          <div style="background: var(--bg-primary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <p style="color: var(--accent-blue); font-weight: 600; margin-bottom: 4px;">Method 2: Automated GitHub Actions APK Build</p>
+            <p style="color: var(--text-muted); font-size: 12px;">Our repository includes an automated GitHub Actions CI/CD workflow. Whenever code is pushed to GitHub, GitHub servers automatically compile <code>app-debug.apk</code> and publish it under <strong>GitHub Releases / Actions Artifacts</strong>, ready for direct download on your phone!</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

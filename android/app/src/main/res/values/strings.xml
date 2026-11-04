@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">OmniLink Remote</string>
+    <string name="accessibility_service_label">OmniLink Remote Control Helper</string>
+    <string name="accessibility_service_description">OmniLink Remote uses the Accessibility Service solely to enable authorized remote users to perform touch gestures (tap, swipe, scroll) and system navigation (Back, Home, Recents) during an active, user-approved remote support session. No personal data, keystrokes, or screen content is logged or shared without consent.</string>
+    
+    <!-- Notification strings -->
+    <string name="notif_channel_name">Screen Sharing &amp; Remote Access</string>
+    <string name="notif_channel_desc">Shows ongoing status while your screen is actively being shared or controlled.</string>
+    <string name="notif_screen_sharing_title">Screen Sharing Active</string>
+    <string name="notif_screen_sharing_text">Your device screen is being shared. Tap to manage or stop.</string>
+    <string name="action_stop_sharing">Stop Session</string>
+</resources>
