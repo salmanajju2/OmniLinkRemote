@@ -1,8 +1,6 @@
 package com.omnilink.remote
 
-import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -19,6 +17,13 @@ import com.omnilink.remote.model.SdpPayload
 import com.omnilink.remote.webrtc.SignalingClient
 import org.webrtc.*
 
+open class SimpleSdpObserver : SdpObserver {
+    override fun onCreateSuccess(desc: SessionDescription?) {}
+    override fun onSetSuccess() {}
+    override fun onCreateFailure(error: String?) {}
+    override fun onSetFailure(error: String?) {}
+}
+
 /**
  * RemotePlayerActivity
  * Phone-to-Phone Controller Screen:
@@ -27,7 +32,6 @@ import org.webrtc.*
 class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListener {
 
     companion object {
-        private const val TAG = "OmniPlayer"
         const val EXTRA_PARTNER_ID = "EXTRA_PARTNER_ID"
         const val EXTRA_PIN = "EXTRA_PIN"
         const val EXTRA_SERVER_URL = "EXTRA_SERVER_URL"
@@ -70,7 +74,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
     }
 
     private fun setupUI() {
-        // Build interactive viewer layout programmatically for maximum compatibility
         val rootLayout = android.widget.RelativeLayout(this).apply {
             setBackgroundColor(0xFF0F172A.toInt())
         }
@@ -88,7 +91,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         )
         rootLayout.addView(surfaceViewRenderer, rendererParams)
 
-        // Loading Progress
         loadingProgress = ProgressBar(this).apply {
             val progressParams = android.widget.RelativeLayout.LayoutParams(
                 android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT,
@@ -100,7 +102,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         }
         rootLayout.addView(loadingProgress)
 
-        // Top Header
         val topBar = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.HORIZONTAL
             setBackgroundColor(0xCC1E293B.toInt())
@@ -115,7 +116,7 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         }
 
         deviceNameLabel = TextView(this).apply {
-            text = "रिमोट डिवाइस: $partnerId"
+            text = "Remote Device: $partnerId"
             setTextColor(0xFFF8FAFC.toInt())
             textSize = 15f
             val textParams = android.widget.LinearLayout.LayoutParams(
@@ -136,7 +137,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         topBar.addView(btnClose)
         rootLayout.addView(topBar)
 
-        // Bottom Navigation Bar (Phone-to-Phone Back, Home, Recents control)
         val bottomBar = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.HORIZONTAL
             setBackgroundColor(0xDD1E293B.toInt())
@@ -160,7 +160,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         bottomBar.addView(btnRecents)
         rootLayout.addView(bottomBar)
 
-        // Setup Touch Listener for Phone-to-Phone Screen Control
         setupTouchListener()
 
         setContentView(rootLayout)
@@ -200,7 +199,7 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val now = System.currentTimeMillis()
-                    if (now - lastTouchSent > 16) { // 60 FPS throttle
+                    if (now - lastTouchSent > 16) {
                         lastTouchSent = now
                         sendInput("MOVE", normX, normY)
                     }
@@ -219,7 +218,7 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         val packet = RemoteInputPacket(action = action, x = x, y = y)
         val json = gson.toJson(packet)
 
-        if (inputDataChannel != null && inputDataChannel?.state() == DataChannel.ChannelState.OPEN) {
+        if (inputDataChannel != null && inputDataChannel?.state() == DataChannel.State.OPEN) {
             val buffer = DataChannel.Buffer(java.nio.ByteBuffer.wrap(json.toByteArray()), false)
             inputDataChannel?.send(buffer)
         }
@@ -229,7 +228,7 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         val packet = RemoteNavCommand(command = command)
         val json = gson.toJson(packet)
 
-        if (inputDataChannel != null && inputDataChannel?.state() == DataChannel.ChannelState.OPEN) {
+        if (inputDataChannel != null && inputDataChannel?.state() == DataChannel.State.OPEN) {
             val buffer = DataChannel.Buffer(java.nio.ByteBuffer.wrap(json.toByteArray()), false)
             inputDataChannel?.send(buffer)
         }
@@ -254,7 +253,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         signalingClient?.connect()
     }
 
-    // Signaling Callbacks
     override fun onConnected() {
         runOnUiThread {
             Toast.makeText(this, "Connecting to device $partnerId...", Toast.LENGTH_SHORT).show()
@@ -312,7 +310,6 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
             override fun onRenegotiationNeeded() {}
         })
 
-        // Create touch data channel if not created by host
         val init = DataChannel.Init().apply {
             ordered = true
             maxRetransmits = 0
@@ -320,12 +317,12 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
         inputDataChannel = peerConnection?.createDataChannel("omni-input", init)
 
         val desc = SessionDescription(SessionDescription.Type.OFFER, sdp.description)
-        peerConnection?.setRemoteDescription(object : WebRtcClient.SdpObserverAdapter() {
+        peerConnection?.setRemoteDescription(object : SimpleSdpObserver() {
             override fun onSetSuccess() {
-                peerConnection?.createAnswer(object : WebRtcClient.SdpObserverAdapter() {
+                peerConnection?.createAnswer(object : SimpleSdpObserver() {
                     override fun onCreateSuccess(answer: SessionDescription?) {
                         if (answer != null) {
-                            peerConnection?.setLocalDescription(object : WebRtcClient.SdpObserverAdapter() {
+                            peerConnection?.setLocalDescription(object : SimpleSdpObserver() {
                                 override fun onSetSuccess() {
                                     signalingClient?.sendAnswer(
                                         fromId,
@@ -342,7 +339,7 @@ class RemotePlayerActivity : ComponentActivity(), SignalingClient.SignalingListe
 
     override fun onAnswerReceived(fromId: String, sdp: SdpPayload) {
         val desc = SessionDescription(SessionDescription.Type.ANSWER, sdp.description)
-        peerConnection?.setRemoteDescription(WebRtcClient.SdpObserverAdapter(), desc)
+        peerConnection?.setRemoteDescription(SimpleSdpObserver(), desc)
     }
 
     override fun onIceCandidateReceived(fromId: String, candidate: IcePayload) {

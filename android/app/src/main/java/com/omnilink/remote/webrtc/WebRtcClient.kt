@@ -11,8 +11,18 @@ import com.omnilink.remote.model.RemoteInputPacket
 import com.omnilink.remote.model.RemoteNavCommand
 import com.omnilink.remote.model.SdpPayload
 import org.webrtc.*
-import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+
+open class SdpObserverAdapter : SdpObserver {
+    override fun onCreateSuccess(desc: SessionDescription?) {}
+    override fun onSetSuccess() {}
+    override fun onCreateFailure(error: String?) {
+        Log.e("OmniSdp", "SDP Create Failure: $error")
+    }
+    override fun onSetFailure(error: String?) {
+        Log.e("OmniSdp", "SDP Set Failure: $error")
+    }
+}
 
 class WebRtcClient(
     private val context: Context,
@@ -40,13 +50,11 @@ class WebRtcClient(
     private var dataChannel: DataChannel? = null
 
     init {
-        // Initialize PeerConnectionFactory globals
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .setEnableInternalTracer(false)
             .createInitializationOptions()
         PeerConnectionFactory.initialize(options)
 
-        // Hardware accelerated video encoder (H.264 / VP8 / VP9) for zero lag
         val encoderFactory = DefaultVideoEncoderFactory(eglBase.eglBaseContext, true, true)
         val decoderFactory = DefaultVideoDecoderFactory(eglBase.eglBaseContext)
 
@@ -57,9 +65,6 @@ class WebRtcClient(
             .createPeerConnectionFactory()
     }
 
-    /**
-     * Initializes Screen Capture track from MediaProjection permission result
-     */
     fun startScreenCapture(resultCode: Int, data: Intent, width: Int = 1080, height: Int = 1920, fps: Int = 60) {
         videoCapturer = ScreenCapturerAndroid(data, object : MediaProjection.Callback() {
             override fun onStop() {
@@ -77,14 +82,10 @@ class WebRtcClient(
         Log.i(TAG, "Hardware Screen Capture started at ${width}x${height} @ ${fps}fps")
     }
 
-    /**
-     * Creates PeerConnection with STUN servers
-     */
     fun createPeerConnection(iceServers: List<PeerConnection.IceServer>) {
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
-            enableDtlsSrtp = true
         }
 
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
@@ -119,7 +120,6 @@ class WebRtcClient(
             override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {}
         })
 
-        // Add local screen video track to PeerConnection
         videoTrack?.let {
             peerConnection?.addTrack(it, listOf("OMNI_STREAM"))
         }
@@ -163,9 +163,6 @@ class WebRtcClient(
         }
     }
 
-    /**
-     * Handles incoming WebRTC SDP Offer from remote controller and generates Answer
-     */
     fun handleRemoteOffer(remoteSdp: SdpPayload, onAnswerCreated: (SdpPayload) -> Unit) {
         val description = SessionDescription(SessionDescription.Type.OFFER, remoteSdp.description)
         peerConnection?.setRemoteDescription(object : SdpObserverAdapter() {
@@ -211,17 +208,6 @@ class WebRtcClient(
             peerConnection = null
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping WebRtcClient", e)
-        }
-    }
-
-    open class SdpObserverAdapter : SdpObserver {
-        override fun onCreateSuccess(desc: SessionDescription?) {}
-        override fun onSetSuccess() {}
-        override fun onCreateFailure(error: String?) {
-            Log.e(TAG, "SDP Create Failure: $error")
-        }
-        override fun onSetFailure(error: String?) {
-            Log.e(TAG, "SDP Set Failure: $error")
         }
     }
 }
