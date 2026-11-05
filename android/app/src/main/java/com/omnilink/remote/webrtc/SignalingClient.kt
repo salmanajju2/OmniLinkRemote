@@ -43,12 +43,13 @@ class SignalingClient(
 
     fun connect() {
         isManuallyClosed = false
-        val wsUrl = if (serverBaseUrl.startsWith("http://")) {
-            serverBaseUrl.replace("http://", "ws://") + "/ws"
+        val cleanBaseUrl = serverBaseUrl.trim().trimEnd('/')
+        val wsUrl = if (cleanBaseUrl.startsWith("http://")) {
+            cleanBaseUrl.replace("http://", "ws://") + "/ws"
         } else if (serverBaseUrl.startsWith("https://")) {
-            serverBaseUrl.replace("https://", "wss://") + "/ws"
+            cleanBaseUrl.replace("https://", "wss://") + "/ws"
         } else {
-            "ws://$serverBaseUrl/ws"
+            "ws://$cleanBaseUrl/ws"
         }
 
         val request = Request.Builder().url(wsUrl).build()

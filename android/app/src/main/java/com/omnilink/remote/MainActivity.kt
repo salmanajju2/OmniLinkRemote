@@ -28,8 +28,8 @@ class MainActivity : ComponentActivity() {
     private var isSharingActive by mutableStateOf(false)
     private var isUnattendedActive by mutableStateOf(false)
     private var allowControlRequested by mutableStateOf(true)
+    private var currentServerUrl by mutableStateOf("http://16.178.122.82:8080")
 
-    // Launcher for MediaProjection Screen Capture Permission
     private val screenCaptureLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 OmniMainScreen(
                     myId = mySessionId,
                     myPin = myPin,
+                    serverUrl = currentServerUrl,
                     isSharingActive = isSharingActive,
                     isAccessibilityEnabled = isAccessibilityConnected,
                     isUnattendedEnabled = isUnattendedActive,
@@ -72,6 +73,12 @@ class MainActivity : ComponentActivity() {
                     },
                     onRequestAccessibility = {
                         openAccessibilitySettings()
+                    },
+                    onSaveServerUrl = { newUrl ->
+                        val prefs = getSharedPreferences("omni_prefs", Context.MODE_PRIVATE)
+                        prefs.edit().putString("server_url", newUrl).apply()
+                        currentServerUrl = newUrl
+                        Toast.makeText(this, "Server URL updated: $newUrl", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -89,6 +96,7 @@ class MainActivity : ComponentActivity() {
         mySessionId = id
         myPin = (1000 + Random.nextInt(9000)).toString()
         isUnattendedActive = prefs.getBoolean("unattended_enabled", false)
+        currentServerUrl = prefs.getString("server_url", "http://16.178.122.82:8080") ?: "http://16.178.122.82:8080"
     }
 
     private fun requestScreenCapture() {
@@ -97,16 +105,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startScreenSharingService(resultCode: Int, data: Intent) {
-        val prefs = getSharedPreferences("omni_prefs", Context.MODE_PRIVATE)
-        val serverUrl = prefs.getString("server_url", "http://192.168.1.100:3000") ?: "http://192.168.1.100:3000"
-
         val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
             action = ScreenCaptureService.ACTION_START
             putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultCode)
             putExtra(ScreenCaptureService.EXTRA_DATA, data)
             putExtra(ScreenCaptureService.EXTRA_SESSION_ID, mySessionId)
             putExtra(ScreenCaptureService.EXTRA_PIN, myPin)
-            putExtra(ScreenCaptureService.EXTRA_SERVER_URL, serverUrl)
+            putExtra(ScreenCaptureService.EXTRA_SERVER_URL, currentServerUrl)
             putExtra(ScreenCaptureService.EXTRA_ALLOW_CONTROL, allowControlRequested)
         }
 
@@ -133,13 +138,10 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        val prefs = getSharedPreferences("omni_prefs", Context.MODE_PRIVATE)
-        val serverUrl = prefs.getString("server_url", "http://192.168.1.100:8080") ?: "http://192.168.1.100:8080"
-
         val intent = Intent(this, RemotePlayerActivity::class.java).apply {
             putExtra(RemotePlayerActivity.EXTRA_PARTNER_ID, cleanId)
             putExtra(RemotePlayerActivity.EXTRA_PIN, pinOrPass)
-            putExtra(RemotePlayerActivity.EXTRA_SERVER_URL, serverUrl)
+            putExtra(RemotePlayerActivity.EXTRA_SERVER_URL, currentServerUrl)
         }
         startActivity(intent)
     }
@@ -163,6 +165,7 @@ class MainActivity : ComponentActivity() {
             action = if (enable) HostBackgroundService.ACTION_START_HOST else HostBackgroundService.ACTION_STOP_HOST
             putExtra(HostBackgroundService.EXTRA_HOST_ID, mySessionId)
             putExtra(HostBackgroundService.EXTRA_PASSWORD, password)
+            putExtra(HostBackgroundService.EXTRA_SERVER_URL, currentServerUrl)
         }
 
         if (enable) {

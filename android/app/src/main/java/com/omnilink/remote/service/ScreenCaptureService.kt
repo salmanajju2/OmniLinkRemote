@@ -58,7 +58,7 @@ class ScreenCaptureService : Service(), WebRtcClient.WebRtcListener, SignalingCl
                 val dataIntent = intent.getParcelableExtra<Intent>(EXTRA_DATA)
                 currentSessionId = intent.getStringExtra(EXTRA_SESSION_ID) ?: ""
                 currentPin = intent.getStringExtra(EXTRA_PIN) ?: ""
-                serverUrl = intent.getStringExtra(EXTRA_SERVER_URL) ?: "http://192.168.1.100:3000"
+                serverUrl = intent.getStringExtra(EXTRA_SERVER_URL) ?: "http://16.178.122.82:8080"
                 allowControl = intent.getBooleanExtra(EXTRA_ALLOW_CONTROL, true)
 
                 if (resultCode == Activity.RESULT_OK && dataIntent != null) {

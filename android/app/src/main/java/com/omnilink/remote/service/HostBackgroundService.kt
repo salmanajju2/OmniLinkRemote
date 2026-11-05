@@ -47,7 +47,7 @@ class HostBackgroundService : Service(), SignalingClient.SignalingListener {
             ACTION_START_HOST -> {
                 hostId = intent.getStringExtra(EXTRA_HOST_ID) ?: ""
                 password = intent.getStringExtra(EXTRA_PASSWORD) ?: ""
-                serverUrl = intent.getStringExtra(EXTRA_SERVER_URL) ?: "http://192.168.1.100:3000"
+                serverUrl = intent.getStringExtra(EXTRA_SERVER_URL) ?: "http://16.178.122.82:8080"
 
                 createNotificationChannel()
                 startForeground(NOTIFICATION_ID, buildHostNotification())

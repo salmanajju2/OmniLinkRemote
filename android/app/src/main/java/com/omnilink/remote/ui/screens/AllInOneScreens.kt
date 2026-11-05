@@ -26,6 +26,7 @@ import com.omnilink.remote.ui.theme.*
 fun OmniMainScreen(
     myId: String,
     myPin: String,
+    serverUrl: String,
     isSharingActive: Boolean,
     isAccessibilityEnabled: Boolean,
     isUnattendedEnabled: Boolean,
@@ -33,10 +34,13 @@ fun OmniMainScreen(
     onStopSharing: () -> Unit,
     onConnectToPartner: (String, String, Boolean) -> Unit,
     onToggleUnattended: (Boolean, String) -> Unit,
-    onRequestAccessibility: () -> Unit
+    onRequestAccessibility: () -> Unit,
+    onSaveServerUrl: (String) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var showAccessibilityDialog by remember { mutableStateOf(false) }
+    var showServerSettingsDialog by remember { mutableStateOf(false) }
+    var tempServerUrl by remember(serverUrl) { mutableStateOf(serverUrl) }
 
     Scaffold(
         topBar = {
@@ -51,6 +55,11 @@ fun OmniMainScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text("OmniLink Remote", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showServerSettingsDialog = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Server Settings", tint = TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -127,6 +136,48 @@ fun OmniMainScreen(
             }
         )
     }
+
+    if (showServerSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showServerSettingsDialog = false },
+            icon = { Icon(Icons.Default.Dns, contentDescription = null, tint = AccentBlue) },
+            title = { Text("Server Connection URL") },
+            text = {
+                Column {
+                    Text(
+                        "Enter the IP address or domain of the OmniLink signaling server:",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    OutlinedTextField(
+                        value = tempServerUrl,
+                        onValueChange = { tempServerUrl = it },
+                        label = { Text("Server URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onSaveServerUrl(tempServerUrl.trim())
+                        showServerSettingsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                ) {
+                    Text("Save & Connect")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showServerSettingsDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = BgSecondary
+        )
+    }
 }
 
 /**
@@ -184,7 +235,7 @@ fun QuickSupportTab(
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 12.dp), color = BgTertiary)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = BgTertiary)
 
                 Text(
                     text = "Temporary PIN",
